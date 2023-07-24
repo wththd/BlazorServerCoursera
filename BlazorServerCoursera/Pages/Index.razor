@@ -1,0 +1,58 @@
+﻿@page "/"
+
+@using BlazorServerCoursera.Data
+
+@inject IJSRuntime JsRuntime
+@inject MyCustomDataService CustomDataService
+@inject LocalStorageService LocalStorageService;
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, <span id="myName">@Name!</span> </h1>
+<button @onclick="TriggerAlert">Trigger Alert</button>
+<button @onclick="TriggerNameQuestion">Trigger name question</button>
+
+@code {
+
+    private const string NameKey = "name";
+    private string Name { get; set; } = "World";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var savedName = await LocalStorageService.GetItemAsync(NameKey);
+            if (!string.IsNullOrEmpty(savedName))
+            {
+                Name = savedName;
+                await JsRuntime.InvokeVoidAsync("myApp.setName", Name);
+            }
+        }
+        
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task TriggerAlert()
+    {
+        var data = CustomDataService.GetDataAsync();
+        await JsRuntime.InvokeVoidAsync("myApp.triggerAlert", Name, data);
+    }
+
+    private async Task TriggerNameQuestion()
+    {
+        var name = await JsRuntime.InvokeAsync<string>("myApp.showPrompt");
+        if (!string.IsNullOrEmpty(name))
+        {
+            Name = name;
+            await LocalStorageService.SetItemAsync(NameKey, name);
+        }
+    }
+
+    [JSInvokable]
+    public static string Greet(string name)
+    {
+        // DotNet.invokeMethodAsync('BlazorServerCoursera', 'Greet', 'Koolya').then(result => console.log(result))
+        return $"Hello, {name}!!!";
+    }
+
+}
